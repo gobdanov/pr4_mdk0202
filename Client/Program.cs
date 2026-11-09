@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Common;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,7 +123,25 @@ namespace Client
                         byte[] bytes = new byte[10485760];
                         int BytesRec = socket.Receive(bytes);
                         string MessageeServer = Encoding.UTF8.GetString(bytes, 0, BytesRec);
-                        viewModelMessage viewModelMessage = JsonConvert.
+                        ViewModelMessage viewModelMessage = JsonConvert.DeserializeObject<ViewModelMessage>(MessageeServer);
+
+                        if (viewModelMessage.Command == "authorization")
+                        {
+                            Id = int.Parse(viewModelMessage.Data);
+                        }
+                        else if (viewModelMessage.Command == "message")
+                        {
+                            Console.WriteLine(viewModelMessage.Data);
+                        }
+                        else if (viewModelMessage.Command == "cd")
+                        {
+                            List<string> FolderFies = new List<string>();
+
+                            //тут писать дальше
+
+                        }
+                        
+
                     }
                 }
             }
