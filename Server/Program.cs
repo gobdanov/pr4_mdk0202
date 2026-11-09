@@ -27,6 +27,11 @@ namespace Server
         /// </summary>
         public static int Port;
 
-        
+        public static bool AutorizationUser(string login, string password)
+        {
+            User user = null;
+            user = Users.Find(x => x.login == login && x.password == password);
+            return user != null;
+        }
     }
 }
