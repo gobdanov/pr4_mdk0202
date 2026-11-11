@@ -27,12 +27,13 @@ namespace Server
         /// <summary>
         /// Конструктор для заполнения класса
         /// </summary>
-        public User(string login, string password, string src, string temp_src)
+        public User(string login, string password, string src)
         {
             this.login = login;
             this.password = password;
             this.src = src;
-            this.temp_src = temp_src;
+
+            temp_src = src;
         }
     }
 }

@@ -15,7 +15,19 @@ namespace Server
     {
         static void Main(string[] args)
         {
+            Users.Add(new User("vlad", "123456", @"D:\\Projects\\VisualStudioProjects"));
+            Console.Write("Введите IP сервера: ");
+            string sIpAdress = Console.ReadLine();
+            Console.Write("Введите порт: ");
+            string sPort = Console.ReadLine();
+            if (IPAddress.TryParse(sIpAdress, out IPAddress) && int.TryParse(sPort, out Port))
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Данные успешно введены. Запускаю сервер");
+                StartServer();
+            }
 
+            Console.Read();
         }
         /// <summary>
         /// Список пользователей
@@ -181,6 +193,5 @@ namespace Server
                 }
             }
         }
-
     }
 }
