@@ -79,7 +79,7 @@ namespace Client
                     }
                     else
                     {
-                        Bcommand = false;
+                        Bcommand = true;
                     }
                 }
             }
