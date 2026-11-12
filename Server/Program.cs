@@ -1,4 +1,5 @@
 ﻿using Common;
+using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -14,10 +15,20 @@ namespace Server
 {
     public class Program
     {
+        /// <summary>
+        /// Ip-адрес сервера
+        /// </summary>
+        public static IPAddress IPAddress;
+        /// <summary>
+        /// Порт сервера
+        /// </summary>
+        public static int Port;
+
+        public const string Path = "server=127.0.0.1;uid=root;pwd=;database=ftp_server;";
+        public static Dictionary<int, User> ActiveUsers = new Dictionary<int, User>();
+
         static void Main(string[] args)
         {
-            Users.Add(new User("vlad", "123456", @"C:\Users\vladm\source\repos\pr4_mdk0202\"));
-            Users.Add(new User("vadim", "123456", @"C:\\Users\\vadim_blagoveshensk\\Documents\\VisualStudoPr4\\"));
             Console.Write("Введите IP сервера: ");
             string sIpAdress = Console.ReadLine();
             Console.Write("Введите порт: ");
@@ -31,24 +42,59 @@ namespace Server
 
             Console.Read();
         }
-        /// <summary>
-        /// Список пользователей
-        /// </summary>
-        public static List<User> Users = new List<User>();
-        /// <summary>
-        /// Ip-адрес сервера
-        /// </summary>
-        public static IPAddress IPAddress;
-        /// <summary>
-        /// Порт сервера
-        /// </summary>
-        public static int Port;
 
-        public static bool AutorizationUser(string login, string password)
+        public static User AutoriztionUser(string login, string password)
         {
-            User user = null;
-            user = Users.Find(x => x.login == login && x.password == password);
-            return user != null;
+            try
+            {
+                using (MySqlConnection conn = new MySqlConnection(Path))
+                {
+                    conn.Open();
+                    string sql = "SELECT id, login, password, src FROM users WHERE login=@l AND password=@p";
+                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                    cmd.Parameters.AddWithValue("@l", login);
+                    cmd.Parameters.AddWithValue("@p", password);
+                    MySqlDataReader reader = cmd.ExecuteReader();
+
+                    if (!reader.Read())
+                        return null;
+
+                    return new User(
+                        reader.GetInt32("id"),
+                        reader.GetString("login"),
+                        reader.GetString("password"),
+                        reader.GetString("src"));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return null;
+            }
+        }
+
+        public static void LogCommand(int userId, string command)
+        {
+            if (userId == -1) return;
+            try
+            {
+                using (MySqlConnection conn = new MySqlConnection(Path))
+                {
+                    conn.Open();
+
+                    string sql = "INSERT INTO log (user_id, command) VALUES (@u, @c);";
+                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+
+                    cmd.Parameters.AddWithValue("@u", userId);
+                    cmd.Parameters.AddWithValue("@c", command);
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception exp)
+            {
+                Console.WriteLine(exp.Message);
+            }
         }
 
         public static List<string> GetDirectory(string src)
@@ -105,12 +151,13 @@ namespace Server
                         if (DataCommand[0] == "connect")
                         {
                             string[] DataMessage = viewModelSend.Message.Split(new string[1] { " " }, StringSplitOptions.None);
-                            if (AutorizationUser(DataMessage[1], DataMessage[2]))
+                            User user = AutoriztionUser(DataMessage[1], DataMessage[2]);
+                            if (user != null)
                             {
-                                int IdUser = Users.FindIndex(x => x.login == DataMessage[1] && x.password == DataMessage[2]);
-                               
-                                viewModelMessage = new ViewModelMessage("autorization", IdUser.ToString());
-                                viewModelSend.Id = IdUser;
+                                ActiveUsers[user.id] = user;
+                                viewModelMessage = new ViewModelMessage("autorization", user.id.ToString());
+                                viewModelSend.Id = user.id;
+                                LogCommand(user.id, "connect" + DataMessage[1]);
                             }
                             else
                             {
@@ -125,12 +172,12 @@ namespace Server
                             if (viewModelSend.Id != -1)
                             {
                                 string[] DataMessage = viewModelSend.Message.Split(new string[1] { " " }, StringSplitOptions.None);
+                                User user = ActiveUsers[viewModelSend.Id];
                                 List<string> FoldersFiles = new List<string>();
                                 if (DataMessage.Length == 1)
                                 {
-                                    Users[viewModelSend.Id].temp_src = Users[viewModelSend.Id].src;
-                                    Users[viewModelSend.Id].temp_src = Users[viewModelSend.Id].src;
-                                    FoldersFiles = GetDirectory(Users[viewModelSend.Id].src);
+                                    user.temp_src = user.src;
+                                    FoldersFiles = GetDirectory(user.src);
                                 }
                                 else
                                 {
@@ -140,13 +187,14 @@ namespace Server
                                             cdFolder += DataMessage[i];
                                         else
                                             cdFolder += " " + DataMessage[i];
-                                    Users[viewModelSend.Id].temp_src = Users[viewModelSend.Id].temp_src + cdFolder;
-                                    FoldersFiles = GetDirectory(Users[viewModelSend.Id].temp_src);
+                                    user.temp_src = user.temp_src + cdFolder;
+                                    FoldersFiles = GetDirectory(user.temp_src);
                                 }
                                 if (FoldersFiles.Count == 0)
                                     viewModelMessage = new ViewModelMessage("cd", "Директория пуста или не существует");
                                 else
                                     viewModelMessage = new ViewModelMessage("cd", JsonConvert.SerializeObject(FoldersFiles));
+                                LogCommand(viewModelSend.Id, viewModelSend.Message);
                             }
                             else
                                 viewModelMessage = new ViewModelMessage("message", "Необходимо авторизоваться");
@@ -165,8 +213,19 @@ namespace Server
                                         getFile += DataMessage[i];
                                     else
                                         getFile += " " + DataMessage[i];
-                                byte[] byteFile = File.ReadAllBytes(Users[viewModelSend.Id].temp_src + getFile);
-                                viewModelMessage = new ViewModelMessage("file", JsonConvert.SerializeObject(byteFile));
+                                User user = ActiveUsers[viewModelSend.Id];
+                                string FullPath = user.temp_src + getFile;
+                                if(!File.Exists(FullPath))
+                                {
+                                    viewModelMessage = new ViewModelMessage("message", "Файл не найден");
+                                }
+                                else
+                                {
+                                    byte[] byteFile = File.ReadAllBytes(FullPath);
+                                    viewModelMessage = new ViewModelMessage("file", JsonConvert.SerializeObject(byteFile));
+
+                                    LogCommand(viewModelSend.Id, viewModelSend.Message);
+                                }
                             }
                             else
                                 viewModelMessage = new ViewModelMessage("message", "Необходимо авторизоваться");
@@ -176,12 +235,15 @@ namespace Server
                         }
                         else
                         {
-                            if (viewModelSend.Id != 1)
+                            User user = ActiveUsers[viewModelSend.Id];
+                            if (viewModelSend.Id != -1)
                             {
                                 string[] DataMessage = viewModelSend.Message.Split(new string[1] { " " }, StringSplitOptions.None);
                                 FileInfoFTP SendFileInfo = JsonConvert.DeserializeObject<FileInfoFTP>(viewModelSend.Message);
-                                File.WriteAllBytes(Users[viewModelSend.Id].temp_src + @"\" + SendFileInfo.Name, SendFileInfo.Data);
+                                File.WriteAllBytes(user.temp_src + @"\" + SendFileInfo.Name, SendFileInfo.Data);
                                 viewModelMessage = new ViewModelMessage("message", "Файл загружен");
+
+                                LogCommand(viewModelSend.Id, "set " + SendFileInfo.Name);
                             }
                             else
                                 viewModelMessage = new ViewModelMessage("message", "Необходимо авторизоваться");

@@ -8,6 +8,7 @@ namespace Server
 {
     public class User
     {
+        public int id {  get; set; }
         /// <summary>
         /// Логин пользователя
         /// </summary>
@@ -27,8 +28,9 @@ namespace Server
         /// <summary>
         /// Конструктор для заполнения класса
         /// </summary>
-        public User(string login, string password, string src)
+        public User(int id, string login, string password, string src)
         {
+            this.id = id;
             this.login = login;
             this.password = password;
             this.src = src;

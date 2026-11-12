@@ -2,6 +2,7 @@
 {
     public class ViewModelSend
     {
+
         /// <summary>
         /// Сообщение отправлямое сервером
         /// </summary>
