@@ -12,12 +12,24 @@ namespace Client
 {
     internal class Program
     {
-        public static IPAddress IpAddress;
+        public static IPAddress ipAddress;
         public static int Port;
         public static int Id = -1;
         static void Main(string[] args)
         {
-
+            Console.Write("введите Ip адрес сервера: ");
+            string sIpAdress = Console.ReadLine();
+            Console.Write("введиет порт: ");
+            string sPort = Console.ReadLine();
+            if(int.TryParse(sPort, out Port) && IPAddress.TryParse(sIpAdress, out ipAddress))
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("данные успешно отправлены. подключаюсь к серверу..");
+                while (true)
+                {
+                    ConnectServer();
+                }
+            }
         }
         public static bool CheckCommand(string message)
         {
@@ -78,7 +90,7 @@ namespace Client
         {
             try
             {
-                IPEndPoint endPoint = new IPEndPoint(IpAddress, Port);
+                IPEndPoint endPoint = new IPEndPoint(ipAddress, Port);
                 Socket socket = new Socket(AddressFamily.InterNetwork,
                     SocketType.Stream,
                     ProtocolType.Tcp);
@@ -109,7 +121,7 @@ namespace Client
                             if (File.Exists(NameFile))
                             {
                                 FileInfo fileInfo = new FileInfo(NameFile);
-                                FileInfoFTP NewFileInfo = new FileInfoFTP(File.ReadAllBytes(NameFile), FileInfo.Name);
+                                FileInfoFTP NewFileInfo = new FileInfoFTP(File.ReadAllBytes(NameFile), fileInfo.Name);
                                 viewModelSend = new ViewModelSend(JsonConvert.SerializeObject(NewFileInfo), Id);
                             }
                             else
@@ -137,13 +149,40 @@ namespace Client
                         {
                             List<string> FolderFies = new List<string>();
 
-                            //тут писать дальше
+                            FolderFies = JsonConvert.DeserializeObject<List<string>>(viewModelMessage.Data);
 
+                            foreach (string Name in FolderFies)
+                                Console.WriteLine(Name);
                         }
-                        
+                        else if (viewModelMessage.Command == "file")
+                        {
+                            string[] DataMessage = viewModelSend.Message.Split(new string[1] { " " }, StringSplitOptions.None);
+                            string getFile = "";
+                            for (int i = 1; i< DataMessage.Length; i++)
+                            {
+                                if (getFile == "")
+                                    getFile = DataMessage[i];
+                                else
+                                    getFile += " " + DataMessage[i];
+                            }
+
+                            byte[] byteFile = JsonConvert.DeserializeObject<byte[]>(viewModelMessage.Data);
+                            File.WriteAllBytes(getFile, byteFile);
+                        }
 
                     }
                 }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("подключение не удалось");
+                }
+                socket.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"что то случилось: {ex.Message}");
             }
         }
     }
