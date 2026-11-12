@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -15,7 +16,7 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            Users.Add(new User("vlad", "123456", @"C:\\Users\\vadim_blagoveshensk\\Documents\\VisualStudoPr4\\"));
+            Users.Add(new User("vlad", "123456", @"C:\Users\vladm\source\repos\pr4_mdk0202\"));
             Users.Add(new User("vadim", "123456", @"C:\\Users\\vadim_blagoveshensk\\Documents\\VisualStudoPr4\\"));
             Console.Write("Введите IP сервера: ");
             string sIpAdress = Console.ReadLine();
@@ -171,12 +172,13 @@ namespace Server
                                 viewModelMessage = new ViewModelMessage("message", "Необходимо авторизоваться");
                             Reply = JsonConvert.SerializeObject(viewModelMessage);
                             byte[] message = Encoding.UTF8.GetBytes(Reply);
-                            Handler.Send(message);
+                            Handler.Send(message);  
                         }
                         else
                         {
                             if (viewModelSend.Id != 1)
                             {
+                                string[] DataMessage = viewModelSend.Message.Split(new string[1] { " " }, StringSplitOptions.None);
                                 FileInfoFTP SendFileInfo = JsonConvert.DeserializeObject<FileInfoFTP>(viewModelSend.Message);
                                 File.WriteAllBytes(Users[viewModelSend.Id].temp_src + @"\" + SendFileInfo.Name, SendFileInfo.Data);
                                 viewModelMessage = new ViewModelMessage("message", "Файл загружен");
