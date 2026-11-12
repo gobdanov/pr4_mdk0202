@@ -137,7 +137,7 @@ namespace Client
                         string MessageeServer = Encoding.UTF8.GetString(bytes, 0, BytesRec);
                         ViewModelMessage viewModelMessage = JsonConvert.DeserializeObject<ViewModelMessage>(MessageeServer);
 
-                        if (viewModelMessage.Command == "authorization")
+                        if (viewModelMessage.Command == "autorization")
                         {
                             Id = int.Parse(viewModelMessage.Data);
                         }

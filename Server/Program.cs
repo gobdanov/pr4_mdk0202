@@ -15,7 +15,8 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            Users.Add(new User("vlad", "123456", @"D:\\Projects\\VisualStudioProjects"));
+            Users.Add(new User("vlad", "123456", @"C:\\Users\\vadim_blagoveshensk\\Documents\\VisualStudoPr4\\"));
+            Users.Add(new User("vadim", "123456", @"C:\\Users\\vadim_blagoveshensk\\Documents\\VisualStudoPr4\\"));
             Console.Write("Введите IP сервера: ");
             string sIpAdress = Console.ReadLine();
             Console.Write("Введите порт: ");
@@ -106,7 +107,9 @@ namespace Server
                             if (AutorizationUser(DataMessage[1], DataMessage[2]))
                             {
                                 int IdUser = Users.FindIndex(x => x.login == DataMessage[1] && x.password == DataMessage[2]);
+                               
                                 viewModelMessage = new ViewModelMessage("autorization", IdUser.ToString());
+                                viewModelSend.Id = IdUser;
                             }
                             else
                             {
