@@ -85,7 +85,6 @@ namespace ClientWPF
             if (reply.Command == "autorization")
             {
                 Id = int.Parse(reply.Data);
-                lblPath.Text = "/";
                 lastCommand = "cd";
                 return true;
             }
@@ -122,7 +121,6 @@ namespace ClientWPF
 
                 if (reply.Command == "cd")
                 {
-                    lblPath.Text = lblPath.Text.TrimEnd('/') + "/" + item.Name;
                     ShowList(reply.Data);
                 }
                 else
@@ -166,7 +164,20 @@ namespace ClientWPF
 
         private void BtnRefresh_Click(object sender, RoutedEventArgs e)
         {
-            RefreshList();
+            if (Id == -1 && !Login()) return;
+
+            lastCommand = "cd";
+
+            var reply = SendToServer(lastCommand);
+            if (reply == null) return;
+
+            if (reply.Command != "cd")
+            {
+                MessageBox.Show(reply.Data, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            ShowList(reply.Data);
         }
 
         private void BtnDownload_Click(object sender, RoutedEventArgs e)
